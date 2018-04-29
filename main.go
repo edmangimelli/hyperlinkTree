@@ -24,13 +24,7 @@ func main() {
 	} else {
 		root = os.Args[1]
 	}
-
-//	files, _ := readDir(root)
-
-//	for _, file := range files {
-//		fmt.Printf("%v\n\n", file)
-//	}
-
+	addTrailingSlash(&root)
 	buildIndices(root)
 }
 
@@ -42,29 +36,30 @@ func buildIndices(dir string) (err error) {
 	if len(files) == 1 && files[0].isHtml {
 		return
 	}
-	index := fmt.Sprintf("%s/index.html", dir)
+	index := fmt.Sprintf("%sindex.html", dir)
 	for _, f := range files {
 		switch {
 		case f.isHtml:
 			appendHyperlinkToFile(index, f.name)
 		case f.isDir:
+			addTrailingSlash(&(f.name))
 			var empty bool // getting a shadowed return error without this line
-			if empty, err = dirIsEmpty(f.name); err != nil {
+			if empty, err = dirIsEmpty(fmt.Sprintf("%s%s", dir, f.name)); err != nil {
 				return
 			} else if empty {
 				continue
 			}
 			var files []file
-			files, err = readDir(f.name)
+			files, err = readDir(fmt.Sprintf("%s%s", dir, f.name))
 			if err != nil {
 				return
 			}
 			if len(files) == 1 && files[0].isHtml {
-				appendHyperlinkToFile(index, fmt.Sprintf("%s/%s", f.name, files[0].name))
+				appendHyperlinkToFile(index, fmt.Sprintf("%s%s", f.name, files[0].name))
 				continue
 			}
-			appendHyperlinkToFile(index, fmt.Sprintf("%s/index.html", f.name))
-			if err = buildIndices(f.name); err != nil {
+			appendHyperlinkToFile(index, fmt.Sprintf("%sindex.html", f.name))
+			if err = buildIndices(fmt.Sprintf("%s%s", dir, f.name)); err != nil {
 				return
 			}
 		}
@@ -86,9 +81,10 @@ func readDir(dir string) (files []file, err error) {
 			files = append(files, file{name: f.Name(), isDir: true})
 		} else {
 			name := f.Name()
-			ext := strings.ToLower(name[len(name)-5:])
-			if ext == ".html" || ext[1:] == ".htm" {
-				files = append(files, file{name: f.Name(), isHtml: true})
+			if len(name) >= 4 { // the shortest possible name for a html file is ".htm"
+				if strings.ToLower(name)[len(name)-4:] == ".htm" || (len(name) > 4 && strings.ToLower(name)[len(name)-5:] == ".html") {
+					files = append(files, file{name: f.Name(), isHtml: true})
+				}
 			}
 		}
 	}
@@ -96,10 +92,16 @@ func readDir(dir string) (files []file, err error) {
 }
 
 func dirIsEmpty(dir string) (answer bool, err error) {
-	files, err := ioutil.ReadDir(dir)
+	files, err := readDir(dir)
 	if err != nil {
 		return
 	}
 	answer = len(files) == 0
 	return
+}
+
+func addTrailingSlash(str *string) {
+	if (*str)[len(*str)-1] != '/' {
+		*str = fmt.Sprintf("%s/", *str)
+	}
 }
