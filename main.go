@@ -40,7 +40,7 @@ func buildIndices(dir string) (err error) {
 	for _, f := range files {
 		switch {
 		case f.isHtml:
-			appendHyperlinkToFile(index, f.name)
+			appendHyperlinkToFile(index, removeExt(f.name), f.name)
 		case f.isDir:
 			addTrailingSlash(&(f.name))
 			var empty bool // getting a shadowed return error without this line
@@ -55,10 +55,10 @@ func buildIndices(dir string) (err error) {
 				return
 			}
 			if len(files) == 1 && files[0].isHtml {
-				appendHyperlinkToFile(index, fmt.Sprintf("%s%s", f.name, files[0].name))
+				appendHyperlinkToFile(index, removeExt(files[0].name), fmt.Sprintf("%s%s", f.name, files[0].name))
 				continue
 			}
-			appendHyperlinkToFile(index, fmt.Sprintf("%sindex.html", f.name))
+			appendHyperlinkToFile(index, f.name, fmt.Sprintf("%sindex.html", f.name))
 			if err = buildIndices(fmt.Sprintf("%s%s", dir, f.name)); err != nil {
 				return
 			}
@@ -67,8 +67,18 @@ func buildIndices(dir string) (err error) {
 	return
 }
 
-func appendHyperlinkToFile(receivingFile string, fileToHyperlink string) {
-	fmt.Printf("              index = %s\nhyperlink to append = %s\n\n", receivingFile, fileToHyperlink)
+func appendHyperlinkToFile(receivingFile string, text string, fileToHyperlink string) (err error) {
+	//fmt.Printf("              index = %s\nhyperlink to append = %s\n\n", receivingFile, fileToHyperlink)
+	f, err := os.OpenFile(receivingFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+	_, err = f.Write([]byte(fmt.Sprintf("<a href=\"%s\">%s</a><br>\n", fileToHyperlink, text)))
+	if err != nil {
+		return
+	}
+	err = f.Close()
+	return
 }
 
 func readDir(dir string) (files []file, err error) {
@@ -104,4 +114,8 @@ func addTrailingSlash(str *string) {
 	if (*str)[len(*str)-1] != '/' {
 		*str = fmt.Sprintf("%s/", *str)
 	}
+}
+
+func removeExt(str string) string {
+	return str[:strings.LastIndex(str, ".")]
 }
