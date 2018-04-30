@@ -42,9 +42,10 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	for _, f := range htmls {
-		fmt.Println(f.name)
-	}
+	//for _, f := range htmls { // debugging
+	//fmt.Println(f.name)
+	//}
+	//fmt.Println()
 
 	if err = chainHtmlFiles(htmls); err != nil {
 		log.Fatalln(err)
@@ -122,12 +123,12 @@ func chainHtmlFiles(files []file) (err error) {
 	lasti := len(files) - 1
 	for i := range files {
 		if i > 0 {
-			if err = appendHyperlinkToFile(files[i].name, "previous", files[i-1].name); err != nil {
+			if err = appendHyperlinkToFile(files[i].name, "previous", relativeTo(files[i].name, files[i-1].name)); err != nil {
 				return
 			}
 		}
 		if i < lasti {
-			if err = appendHyperlinkToFile(files[i].name, "next", files[i+1].name); err != nil {
+			if err = appendHyperlinkToFile(files[i].name, "next", relativeTo(files[i].name, files[i+1].name)); err != nil {
 				return
 			}
 		}
@@ -188,3 +189,98 @@ func addTrailingSlash(str *string) {
 func removeExt(str string) string {
 	return str[:strings.LastIndex(str, ".")]
 }
+
+func relativeTo(pathOfCurrent, path string) string {
+	pOC := strings.Split(pathOfCurrent, "/")
+	pOC = pOC[:len(pOC)-1]
+
+	p := strings.Split(path, "/")
+	file := p[len(p)-1]
+	p = p[:len(p)-1]
+
+	i := 0
+	for ; i < len(pOC) && i < len(p) && pOC[i] == p[i]; i++ {
+	}
+	pOC = pOC[i:]
+	p = p[i:]
+
+	backUp := ""
+	for i = 0; i < len(pOC); i++ {
+		backUp += "../"
+	}
+
+	goForward := ""
+	goForward += strings.Join(p, "/")
+	if goForward != "" {
+		goForward += "/"
+	}
+
+	return backUp + goForward + file
+}
+
+/*
+relativeTo notes
+
+This was a fun problem!
+
+Given a list like this:
+
+testFiles/Squirrelerella_Gets_Married/Ch1.html
+testFiles/Squirrelerella_Gets_Married/Ch2.html
+testFiles/Squirrelerella_Gets_Married/Ch3.html
+testFiles/Writing_Performant_COBOL/Chapter_1/footNotes.html
+testFiles/Writing_Performant_COBOL/Chapter_1/part1.html
+testFiles/Writing_Performant_COBOL/Chapter_1/part2.html
+testFiles/Writing_Performant_COBOL/Chapter_2/text.HTM
+testFiles/Writing_Performant_COBOL/Chapter_3.html
+testFiles/Writing_Performant_COBOL/Chapter_4/text.html
+testFiles/Writing_Performant_COBOL/Introduction.html
+
+how do you make relative links?
+for instance, footNotes.html needs to point back to ../../Squirrelerella_Gets_Married/Ch3.html
+
+after studying these examples:
+
+a/x.html
+a/y.html
+
+a/b/x.html
+a/b/y.html
+
+/a/b/c/m/x.html
+/a/b/d/n/y.html
+
+a/b/c/d/x.html
+a/y.html
+
+a/x.html
+a/b/c/d/y.html
+
+i came up with this algorithm:
+
+path to link to: /a/b/c/m/x.html
+current file:    /a/b/d/n/y.html
+
+split each string
+
+a b c m x.html
+a b d n y.html
+
+set the files aside (keep the destination file)
+
+a b c m
+a b d n
+
+starting from the left, remove matching folders
+
+c m
+d n
+
+with what you have left, replace the folders from the current file (d and n) with ..'s
+and then append those ..'s in front the folders from the path to link to
+
+../../c/m/
+
+reappend destination file
+
+*/
