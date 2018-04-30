@@ -1,4 +1,3 @@
-_status: "Step 1" is working. "Step 2" is buggy._
 # hyperlinkTree
 hyperlink a directory tree of html files recursively
 
